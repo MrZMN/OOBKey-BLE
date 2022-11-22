@@ -1,11 +1,3 @@
-/*
- * (c) Matey Nenov (https://www.thinker-talk.com)
- *
- * Licensed under Creative Commons: By Attribution 3.0
- * http://creativecommons.org/licenses/by/3.0/
- *
- */
-
 package com.nenoff.connecttoarduinoble;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,9 +28,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     private boolean isLEDOn = false;
 
-    private boolean isAlive = false;
-    private Thread heartBeatThread = null;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,37 +47,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         checkPermissions();
 
         disableButtons();
-    }
-
-    public void startHeartBeat() {
-        this.isAlive = true;
-        this.heartBeatThread = createHeartBeatThread();
-        this.heartBeatThread.start();
-    }
-
-    public void stopHeartBeat() {
-        if(this.isAlive) {
-            this.isAlive = false;
-            this.heartBeatThread.interrupt();
-        }
-    }
-
-    private Thread createHeartBeatThread() {
-        return new Thread() {
-            @Override
-            public void run() {
-                while(MainActivity.this.isAlive) {
-                    heartBeat();
-                    try {
-                        Thread.sleep(1000l);
-                    }catch(InterruptedException ie) { return; }
-                }
-            }
-        };
-    }
-
-    private void heartBeat() {
-        this.remoteControl.heartbeat();
     }
 
     private void initConnectButton() {
@@ -185,7 +143,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.bleController.addBLEControllerListener(this);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            log("[BLE]\tSearching for BlueCArd...");
+            log("[BLE]\tSearching for OOBKey...");
             this.bleController.init();
         }
     }
@@ -195,7 +153,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         super.onPause();
 
         this.bleController.removeBLEControllerListener(this);
-        stopHeartBeat();
     }
 
     @Override
@@ -208,7 +165,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                 switchLEDButton.setEnabled(true);
             }
         });
-        startHeartBeat();
     }
 
     @Override
@@ -222,7 +178,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             }
         });
         this.isLEDOn = false;
-        stopHeartBeat();
     }
 
     @Override

@@ -17,10 +17,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity implements BLEControllerListener {
-    private TextView logView;
-    private Button connectButton;
-    private Button disconnectButton;
-    private Button switchLEDButton;
 
     private BLEController bleController;
     private RemoteControl remoteControl;
@@ -36,92 +32,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.bleController = BLEController.getInstance(this);
         this.remoteControl = new RemoteControl(this.bleController);
 
-        this.logView = findViewById(R.id.logView);
-        this.logView.setMovementMethod(new ScrollingMovementMethod());
-
-        initConnectButton();
-        initDisconnectButton();
-        initSwitchLEDButton();
-
         checkBLESupport();
         checkPermissions();
-
-        disableButtons();
-    }
-
-    private void initConnectButton() {
-        this.connectButton = findViewById(R.id.connectButton);
-        this.connectButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                connectButton.setEnabled(false);
-                log("Connecting...");
-                bleController.connectToDevice(deviceAddress);
-            }
-        });
-    }
-
-    private void initDisconnectButton() {
-        this.disconnectButton = findViewById(R.id.disconnectButton);
-        this.disconnectButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                disconnectButton.setEnabled(false);
-                log("Disconnecting...");
-                bleController.disconnect();
-            }
-        });
-    }
-
-    private void initSwitchLEDButton() {
-        this.switchLEDButton = findViewById(R.id.switchButton);
-        this.switchLEDButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                isLEDOn = !isLEDOn;
-                remoteControl.switchLED(isLEDOn);
-                log("LED switched " + (isLEDOn?"On":"Off"));
-            }
-        });
-    }
-
-    private void disableButtons() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                connectButton.setEnabled(false);
-                disconnectButton.setEnabled(false);
-                switchLEDButton.setEnabled(false);
-            }
-        });
-    }
-
-    private void log(final String text) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                logView.setText(logView.getText() + "\n" + text);
-            }
-        });
-    }
-
-    private void checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            log("\"Access Fine Location\" permission not granted yet!");
-            log("Whitout this permission Blutooth devices cannot be searched!");
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    42);
-        }
-    }
-
-    private void checkBLESupport() {
-        // Check if BLE is supported on the device.
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this, "BLE not supported!", Toast.LENGTH_SHORT).show();
-            finish();
-        }
     }
 
     @Override
@@ -143,9 +55,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.bleController.addBLEControllerListener(this);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
-            log("[BLE]\tSearching for OOBKey...");
             this.bleController.init();
         }
+
     }
 
     @Override
@@ -155,35 +67,35 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.bleController.removeBLEControllerListener(this);
     }
 
+    private void checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    42);
+        }
+    }
+
+    private void checkBLESupport() {
+        // Check if BLE is supported on the device.
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(this, "BLE not supported!", Toast.LENGTH_SHORT).show();
+            finish();
+        }
+    }
+
     @Override
     public void BLEControllerConnected() {
-        log("[BLE]\tConnected");
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                disconnectButton.setEnabled(true);
-                switchLEDButton.setEnabled(true);
-            }
-        });
+
     }
 
     @Override
     public void BLEControllerDisconnected() {
-        log("[BLE]\tDisconnected");
-        disableButtons();
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                connectButton.setEnabled(true);
-            }
-        });
         this.isLEDOn = false;
     }
 
     @Override
     public void BLEDeviceFound(String name, String address) {
-        log("Device " + name + " found with address " + address);
         this.deviceAddress = address;
-        this.connectButton.setEnabled(true);
     }
 }

@@ -81,7 +81,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             @Override
             public void onClick(View v) {
                 Log.d(TAG, "START button pressed");
-                remoteControl.switchLED(true);
+                if(bleController.isBLEConnected == true) {
+                    remoteControl.switchLED(true);
+                }else {
+                    Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
+                }
             }
         });
     }

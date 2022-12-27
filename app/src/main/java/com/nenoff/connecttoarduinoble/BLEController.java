@@ -41,6 +41,7 @@ public class BLEController {
     private HashMap<String, BluetoothDevice> devices = new HashMap<>();
 
     private String TAG = "OOBKey";
+    public boolean isBLEConnected = false;
 
     private BLEController(Context ctx) {
         this.bluetoothManager = (BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
@@ -122,6 +123,7 @@ public class BLEController {
                 btGattChar = null;
                 Log.d(TAG, "DISCONNECTED with status " + status);
                 fireDisconnected();
+                isBLEConnected = false;
             }else {
                 Log.d(TAG, "unknown state " + newState + " and status " + status);
             }
@@ -140,6 +142,7 @@ public class BLEController {
                                     btGattChar = bgc;
                                     Log.d(TAG, "CONNECTED and ready to send");
                                     fireConnected();
+                                    isBLEConnected = true;
                                 }
                             }
                         }

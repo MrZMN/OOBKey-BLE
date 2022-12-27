@@ -40,6 +40,8 @@ public class BLEController {
     private ArrayList<BLEControllerListener> listeners = new ArrayList<>();
     private HashMap<String, BluetoothDevice> devices = new HashMap<>();
 
+    private String TAG = "OOBKey";
+
     private BLEController(Context ctx) {
         this.bluetoothManager = (BluetoothManager) ctx.getSystemService(Context.BLUETOOTH_SERVICE);
     }
@@ -72,6 +74,7 @@ public class BLEController {
             BluetoothDevice device = result.getDevice();
             if(!devices.containsKey(device.getAddress()) && isThisTheDevice(device)) {
                 deviceFound(device);
+                connectToDevice(device.getAddress());
             }
         }
 
@@ -87,15 +90,15 @@ public class BLEController {
 
         @Override
         public void onScanFailed(int errorCode) {
-            Log.i("[BLE]", "scan failed with errorcode: " + errorCode);
+            Log.d(TAG, "scan failed with errorcode: " + errorCode);
         }
     };
 
     private boolean isThisTheDevice(BluetoothDevice device) {
         if(device.getName() != null) {
-            Log.d("OOBKey", device.getName());
+            Log.d(TAG, device.getName());
         }
-        return null != device.getName() && device.getName().startsWith("LEDCallback");
+        return null != device.getName() && device.getName().startsWith("OOBKey");
     }
 
     private void deviceFound(BluetoothDevice device) {
@@ -106,7 +109,7 @@ public class BLEController {
     public void connectToDevice(String address) {
         this.device = this.devices.get(address);
         this.scanner.stopScan(this.bleCallback);
-        Log.i("[BLE]", "connect to device " + device.getAddress());
+        Log.d(TAG, "connect to device " + device.getAddress());
         this.bluetoothGatt = device.connectGatt(null, false, this.bleConnectCallback);
     }
 
@@ -114,13 +117,13 @@ public class BLEController {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                Log.i("[BLE]", "start service discovery " + bluetoothGatt.discoverServices());
+                Log.d(TAG, "start service discovery " + bluetoothGatt.discoverServices());
             }else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 btGattChar = null;
-                Log.w("[BLE]", "DISCONNECTED with status " + status);
+                Log.d(TAG, "DISCONNECTED with status " + status);
                 fireDisconnected();
             }else {
-                Log.i("[BLE]", "unknown state " + newState + " and status " + status);
+                Log.d(TAG, "unknown state " + newState + " and status " + status);
             }
         }
 
@@ -135,7 +138,7 @@ public class BLEController {
                                 int chprop = bgc.getProperties();
                                 if (((chprop & BluetoothGattCharacteristic.PROPERTY_WRITE) | (chprop & BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE)) > 0) {
                                     btGattChar = bgc;
-                                    Log.i("[BLE]", "CONNECTED and ready to send");
+                                    Log.d(TAG, "CONNECTED and ready to send");
                                     fireConnected();
                                 }
                             }

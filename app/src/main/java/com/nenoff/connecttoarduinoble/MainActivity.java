@@ -18,22 +18,31 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity implements BLEControllerListener {
 
+    // BLE
     private BLEController bleController;
     private RemoteControl remoteControl;
     private String deviceAddress;
 
-    private boolean isLEDOn = false;
+    // UI
+    private Button startbt;
+
+    // constant
+    private String TAG = "OOBKey";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // BLE
         this.bleController = BLEController.getInstance(this);
         this.remoteControl = new RemoteControl(this.bleController);
 
         checkBLESupport();
         checkPermissions();
+
+        // UI
+        initConnectButton();
     }
 
     @Override
@@ -53,11 +62,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.deviceAddress = null;
         this.bleController = BLEController.getInstance(this);
         this.bleController.addBLEControllerListener(this);
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             this.bleController.init();
         }
-
     }
 
     @Override
@@ -67,9 +74,20 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.bleController.removeBLEControllerListener(this);
     }
 
+    // init the START button
+    private void initConnectButton() {
+        this.startbt = findViewById(R.id.button);
+        this.startbt.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d(TAG, "START button pressed");
+                remoteControl.switchLED(true);
+            }
+        });
+    }
+
     private void checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     42);
@@ -91,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     @Override
     public void BLEControllerDisconnected() {
-        this.isLEDOn = false;
+
     }
 
     @Override

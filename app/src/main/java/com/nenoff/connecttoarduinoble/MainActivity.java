@@ -9,12 +9,16 @@ import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -35,21 +39,24 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     // UI
     private Button startbt;
+    private int initialcolor = Color.parseColor("#9acd32");
+    private int afterpresscolor = Color.parseColor("#d3d3d3");
 
     // Sensor
     private SensorManager sensorManager;
     Sensor accelerometer, gyroscope;
+    private Vibrator vibrator;
 
     // File IO
-    private boolean isdatalog = false;
+    private boolean isdatalog = false;          // control start/stop datalog
     private FileOutputStream out;
     private BufferedWriter writer;
-    private final String ACC_FILE_NAME = "acc_dt";
-    private final String GYO_FILE_NAME = "gyo_dt";
+    private final String ACC_FILE_NAME = "tap_phone_acc.dat";
+    private final String GYO_FILE_NAME = "tap_phone_gyro.dat";
     final Handler handler = new Handler();      // for delay purpose
-    private final int datalogtime = 60000;      // delay period in ms
+    private final int datalogtime = 10000;      // delay period in ms
 
-    // constant
+    // Logs
     private String TAG = "OOBKey";
 
     @Override
@@ -77,8 +84,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         if(gyroscope != null) {
             sensorManager.registerListener(MainActivity.this, gyroscope, SensorManager.SENSOR_DELAY_FASTEST);
         }
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
-
 
     @Override
     protected void onStart() {
@@ -113,7 +120,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     protected void onStop() {
         super.onStop();
 
-        isdatalog = false;
+        isdatalog = false;  // stop datalogging at any moment when phone returns to main page
     }
 
     private void checkPermissions() {
@@ -151,29 +158,49 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     // UI
     private void initConnectButton() {
         this.startbt = findViewById(R.id.button);
+        this.startbt.setBackgroundColor(initialcolor);
+
         this.startbt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                // send a signal to the device
+                // check if connected with device
                 if(bleController.isBLEConnected == true) {
-                    remoteControl.switchLED(true);
+
+                    // disable the button
+                    startbt.setEnabled(false);
+                    startbt.setBackgroundColor(afterpresscolor);
+
+                    remoteControl.switchLED(true);      // send a signal to the device
+
+                    // phone starts datalog
+                    Log.d(TAG, "Datalog starts");
+                    isdatalog = true;
+
+                    // phone stops datalog after a period
+                    handler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Do something after the delay
+                            isdatalog = false;
+                            Log.d(TAG, "Datalog stops");
+
+                            // enable the button
+                            startbt.setEnabled(true);
+                            startbt.setBackgroundColor(initialcolor);
+
+                            // Vibrate
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE));
+                            } else {
+                                //deprecated in API 26
+                                vibrator.vibrate(1000);
+                            }
+                        }
+                    }, datalogtime);
                 }else {
                     Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
                 }
-
-                Log.d(TAG, "Datalog starts");
-                isdatalog = true;
-
-                // stop datalog after a period
-                handler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Do something after the delay
-                        isdatalog = false;
-                        Log.d(TAG, "Datalog stops");
-                    }
-                }, datalogtime);
             }
         });
     }
@@ -197,7 +224,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     }
 
-    // File IO
+    // File IO (new data will be appended)
     private void saveonesample(SensorEvent sensorEvent, String sensorType){
         try {
             if(sensorType == "ACC") {

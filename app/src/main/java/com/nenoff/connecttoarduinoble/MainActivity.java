@@ -20,9 +20,13 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedWriter;
@@ -39,9 +43,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private String deviceAddress;
 
     // UI
-    private Button startbt;
-    private int initialcolor = Color.parseColor("#9acd32");
-    private int afterpresscolor = Color.parseColor("#d3d3d3");
+    private ImageButton startbt;
+    private int bubackground = Color.parseColor("#00000000");
 
     // Sensor
     private SensorManager sensorManager;
@@ -74,6 +77,30 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
         // UI
         initConnectButton();
+
+        TextView tv1 = findViewById(R.id.textView);
+        TextView tv2 = findViewById(R.id.textView2);
+        TextView tv3 = findViewById(R.id.textView3);
+
+        String sentence1 = "1. Press the icon";
+        String sentence2 = "2. Tap me on your chest";
+        String sentence3 = "3. Stop with a vibration";
+
+//        ForegroundColorSpan fcsRed = new ForegroundColorSpan(Color.RED);
+//        ForegroundColorSpan fcsBlue = new ForegroundColorSpan(Color.BLUE);
+//        ForegroundColorSpan fcsGreen = new ForegroundColorSpan(Color.parseColor("#A4C639"));
+        ForegroundColorSpan fcsPurple = new ForegroundColorSpan(Color.parseColor("#A660EC"));
+
+        SpannableString ss1 = new SpannableString(sentence1);
+        SpannableString ss2 = new SpannableString(sentence2);
+        SpannableString ss3 = new SpannableString(sentence3);
+
+        ss2.setSpan(fcsPurple, 3,  6, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss3.setSpan(fcsPurple, 15,  24, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        tv1.setText(ss1);
+        tv2.setText(ss2);
+        tv3.setText(ss3);
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -169,8 +196,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     // UI
     private void initConnectButton() {
-        this.startbt = findViewById(R.id.button);
-        this.startbt.setBackgroundColor(initialcolor);
+        this.startbt = findViewById(R.id.imageButton);
+        this.startbt.setBackgroundColor(bubackground);
 
         this.startbt.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -181,7 +208,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                     // disable the button
                     startbt.setEnabled(false);
-                    startbt.setBackgroundColor(afterpresscolor);
+                    startbt.setImageResource(R.drawable.ic_baseline_sd_card_24);
 
                     remoteControl.switchLED(true);      // send a signal to the device
 
@@ -199,7 +226,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                             // enable the button
                             startbt.setEnabled(true);
-                            startbt.setBackgroundColor(initialcolor);
+                            startbt.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
 
                             // Vibrate
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

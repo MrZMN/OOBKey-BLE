@@ -35,6 +35,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity implements BLEControllerListener, SensorEventListener {
 
@@ -92,9 +95,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         String sentence2 = "2. Tap me on your chest";
         String sentence3 = "3. Stop with a vibration";
 
-//        ForegroundColorSpan fcsRed = new ForegroundColorSpan(Color.RED);
-//        ForegroundColorSpan fcsBlue = new ForegroundColorSpan(Color.BLUE);
-//        ForegroundColorSpan fcsGreen = new ForegroundColorSpan(Color.parseColor("#A4C639"));
         ForegroundColorSpan fcsPurple = new ForegroundColorSpan(Color.parseColor("#A660EC"));
 
         SpannableString ss1 = new SpannableString(sentence1);
@@ -214,7 +214,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                 two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
                 three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
 
-                one_glug.start();
+                ArrayList<Integer> testArr = new ArrayList<>(Arrays.asList(3, 1, 1, 3));
+                if(checkPattern(testArr)) {
+                    one_glug.start();
+                }
 
                 // check if connected with device
                 if(bleController.isBLEConnected == true) {
@@ -295,5 +298,61 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static boolean checkFrequency(ArrayList<Integer> arr) {
+        int n = arr.size();
+        if (n < 4) {
+            return false;
+        }
+
+        // Slice the last four elements of the array.
+        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(n - 4, n));
+
+        // Check the count of each element in the last_four array.
+        for (int i = 0; i < 4; i++) {
+            if (Collections.frequency(last_four, last_four.get(i)) > 2) {
+                return true;
+            }
+        }
+
+        // If we have checked all the elements without finding an element that
+        // appears more than twice, return false.
+        return false;
+    }
+
+    public static boolean checkOscillation(ArrayList<Integer> arr) {
+        int n = arr.size();
+        if (n < 3) {
+            return false;
+        }
+
+        // Slice the last three elements of the array.
+        ArrayList<Integer> last_three = new ArrayList<>(arr.subList(n - 3, n));
+
+        // Check if all three elements are identical.
+        if (last_three.get(0).equals(last_three.get(1)) && last_three.get(1).equals(last_three.get(2))) {
+            return true;
+        }
+
+        // If the last three elements are not identical, return false.
+        return false;
+    }
+
+    public static boolean checkPattern(ArrayList<Integer> arr) {
+        if (arr.size() < 4) {
+            return false;
+        }
+
+        int a = arr.get(arr.size() - 1);
+        int b = arr.get(arr.size() - 2);
+
+        if (a == b) {
+            return false;
+        }
+
+        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a));
+        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(arr.size() - 4, arr.size()));
+        return last_four.equals(pattern);
     }
 }

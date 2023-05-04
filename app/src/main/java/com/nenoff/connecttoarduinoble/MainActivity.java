@@ -15,6 +15,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -59,6 +60,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final String GYO_FILE_NAME = "tap_phone_gyro.dat";
     final Handler handler = new Handler();      // for delay purpose
     private final int datalogtime = 10000;      // delay period in ms
+
+    // Sound
+    MediaPlayer one_glug;
+    MediaPlayer two_glug;
+    MediaPlayer three_glug;
 
     // Logs
     private String TAG = "OOBKey";
@@ -202,6 +208,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.startbt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                // Media
+                one_glug = MediaPlayer.create(MainActivity.this, R.raw.one_glug);
+                two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
+                three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
+
+                one_glug.start();
 
                 // check if connected with device
                 if(bleController.isBLEConnected == true) {

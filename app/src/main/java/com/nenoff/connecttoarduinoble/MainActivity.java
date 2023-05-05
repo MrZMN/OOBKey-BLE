@@ -64,10 +64,14 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     final Handler handler = new Handler();      // for delay purpose
     private final int datalogtime = 10000;      // delay period in ms
 
-    // Sound
+    // Feedback
     MediaPlayer one_glug;
     MediaPlayer two_glug;
     MediaPlayer three_glug;
+
+    private ArrayList<Integer> classes = new ArrayList<Integer>();
+    private int prev_score = 2;
+    private int no_punish_rounds = 0;
 
     // Peak detection
     private static final double MIN_AMPLITUDE = 7;      // Minimum amplitude for a peak (g)
@@ -113,6 +117,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv1.setText(ss1);
         tv2.setText(ss2);
         tv3.setText(ss3);
+
+        // Media
+        one_glug = MediaPlayer.create(MainActivity.this, R.raw.one_glug);
+        two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
+        three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -215,16 +224,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             @Override
             public void onClick(View v) {
 
-                // Media
-                one_glug = MediaPlayer.create(MainActivity.this, R.raw.one_glug);
-                two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
-                three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
-
-                ArrayList<Integer> testArr = new ArrayList<>(Arrays.asList(3, 1, 3, 1));
-                if(checkPattern(testArr)) {
-                    one_glug.start();
-                }
-
                 // check if connected with device
                 if(bleController.isBLEConnected == true) {
 
@@ -273,6 +272,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
         if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             signalLength++;
+            // check ACC_X
             detectPeak(sensorEvent.values[0], signalLength);
         }
 
@@ -372,10 +372,77 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     public void detectPeak(Float newPoint, Integer signalLength) {
         int current_index = signalLength - 1;
 
-        if (newPoint > MIN_AMPLITUDE && current_index - last_peak_index >= MIN_DISTANCE) {
-            // Found a new peak
-            Log.d("PeakDetection", "" + (current_index - last_peak_index));
+        // Criteria as a tap
+        if (newPoint > MIN_AMPLITUDE && (current_index - last_peak_index) >= MIN_DISTANCE) {
+
+            int interval = (current_index - last_peak_index) * 1000 / 444;  // in ms
+            Log.d("PeakDetection", "" + interval + " ms");
+            feedbackControl(interval);
             last_peak_index = current_index;
+        }
+    }
+
+    public void feedbackControl(Integer interval) {
+        // classify the time interval
+        if(interval < 750){
+            classes.add(1);
+        }else if(interval >= 750 && interval <= 1500){
+            classes.add(2);
+        }else{
+            classes.add(3);
+        }
+
+        // init score
+        int score = 2;
+        int is_punish = 0;
+
+        // Punish strategy 1: frequency check
+        if(checkFrequency(classes)) {
+            score -= 1;
+            is_punish = 1;
+        }
+        // Punish strategy 2: oscillation check
+        if(checkOscillation(classes)) {
+            score -= 1;
+            is_punish = 1;
+        }
+        // Punish strategy 3: pattern check
+        if(checkPattern(classes)) {
+            score -= 1;
+            is_punish = 1;
+        }
+
+        // Reward strategy 1: if the score is higher than previous round, add 1 to the score
+        if(score > prev_score) {
+            score += 1;
+        }
+        // Reward strategy 2: if there are no punish for three consecutive rounds, add 1 to the score
+        if(no_punish_rounds >= 3) {
+            score += 1;
+            no_punish_rounds = 0;
+        }
+
+        score = Math.max(0, Math.min(score, 3));
+        Log.d("PeakDetection", "Score: " + score);
+
+        play_glug(score);
+
+        prev_score = score;
+        if(is_punish == 1) {
+            no_punish_rounds = 0;
+        }else {
+            no_punish_rounds += 1;
+        }
+    }
+
+    public void play_glug(Integer score) {
+        if(score == 1){
+            one_glug.start();
+        }else if(score == 2){
+            two_glug.start();
+        }else if(score == 3){
+            three_glug.start();
+        }else{
         }
     }
 }

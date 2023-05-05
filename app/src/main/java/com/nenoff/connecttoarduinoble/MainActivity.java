@@ -69,6 +69,12 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     MediaPlayer two_glug;
     MediaPlayer three_glug;
 
+    // Peak detection
+    private static final double MIN_AMPLITUDE = 7;      // Minimum amplitude for a peak (g)
+    private static final int MIN_DISTANCE = 100;        // Minimum distance between two peaks (index)
+    private int last_peak_index = 0;
+    private int signalLength = 0;
+
     // Logs
     private String TAG = "OOBKey";
 
@@ -214,7 +220,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                 two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
                 three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
 
-                ArrayList<Integer> testArr = new ArrayList<>(Arrays.asList(3, 1, 1, 3));
+                ArrayList<Integer> testArr = new ArrayList<>(Arrays.asList(3, 1, 3, 1));
                 if(checkPattern(testArr)) {
                     one_glug.start();
                 }
@@ -256,6 +262,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                 }else {
                     Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
                 }
+
             }
         });
     }
@@ -263,6 +270,12 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     // Sensor
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
+
+        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            signalLength++;
+            detectPeak(sensorEvent.values[0], signalLength);
+        }
+
         // operate only when datalog initialised
         if(isdatalog == true){
             if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
@@ -354,5 +367,15 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a));
         ArrayList<Integer> last_four = new ArrayList<>(arr.subList(arr.size() - 4, arr.size()));
         return last_four.equals(pattern);
+    }
+
+    public void detectPeak(Float newPoint, Integer signalLength) {
+        int current_index = signalLength - 1;
+
+        if (newPoint > MIN_AMPLITUDE && current_index - last_peak_index >= MIN_DISTANCE) {
+            // Found a new peak
+            Log.d("PeakDetection", "" + (current_index - last_peak_index));
+            last_peak_index = current_index;
+        }
     }
 }

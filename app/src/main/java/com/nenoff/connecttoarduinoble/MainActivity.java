@@ -74,10 +74,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private int no_punish_rounds = 0;
 
     // Peak detection
-    private static final double MIN_AMPLITUDE = 7;      // Minimum amplitude for a peak (g)
-    private static final int MIN_DISTANCE = 100;        // Minimum distance between two peaks (index)
+    private final float MIN_AMPLITUDE = 4F; // min amplitude to be a peak
+    private final int MIN_DISTANCE = 20;    // min distance between two consecutive peaks
+    private final int MAX_HA_WIDTH = 10;    // max width (from the lastest half-amplitude point to the peak)
+    private ArrayList<Float> signal = new ArrayList<Float>();
     private int last_peak_index = 0;
-    private int signalLength = 0;
 
     // Logs
     private String TAG = "OOBKey";
@@ -271,9 +272,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     public void onSensorChanged(SensorEvent sensorEvent) {
 
         if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            signalLength++;
             // check ACC_X
-            detectPeak(sensorEvent.values[0], signalLength);
+            signal.add(sensorEvent.values[0]);
+            detectPeak(signal);
         }
 
         // operate only when datalog initialised
@@ -369,17 +370,45 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         return last_four.equals(pattern);
     }
 
-    public void detectPeak(Float newPoint, Integer signalLength) {
-        int current_index = signalLength - 1;
-
-        // Criteria as a tap
-        if (newPoint > MIN_AMPLITUDE && (current_index - last_peak_index) >= MIN_DISTANCE) {
-
-            int interval = (current_index - last_peak_index) * 1000 / 444;  // in ms
-            Log.d("PeakDetection", "" + interval + " ms");
-            feedbackControl(interval);
-            last_peak_index = current_index;
+    public void detectPeak(ArrayList<Float> signal) {
+        int length = signal.size();
+        if (length > 2) {
+            // local optimum
+            if (signal.get(length - 2) > signal.get(length - 3) && signal.get(length - 2) > signal.get(length - 1)) {
+                // amplitude
+                if (signal.get(length - 2) > MIN_AMPLITUDE) {
+                    // distance between two peaks
+                    if ((length - 2) - last_peak_index > MIN_DISTANCE) {
+                        // width of the signal
+                        if (detecthawidth(signal)) {
+                            int interval = (length - 2 - last_peak_index) * 1000 / 449;  // in ms
+                            Log.d("PeakDetection", "" + interval + " ms");
+                            feedbackControl(interval);
+                            last_peak_index = length - 2;
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    public boolean detecthawidth(ArrayList<Float> signal) {
+        int length = signal.size();
+        if (length > MAX_HA_WIDTH) {
+            // from the second-to-last element to the first element <--
+            for (int i = length - 2; i >= 0; i--) {
+                // find the first half-amplitude point
+                if (signal.get(i) <= signal.get(length - 2) / 2) {
+                    // width of half amplitude
+                    if ((length - 2 - i) < MAX_HA_WIDTH) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public void feedbackControl(Integer interval) {

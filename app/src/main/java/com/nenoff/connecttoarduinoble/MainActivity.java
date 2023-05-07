@@ -65,9 +65,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final int datalogtime = 10000;      // delay period in ms
 
     // Feedback
-    MediaPlayer one_glug;
-    MediaPlayer two_glug;
-    MediaPlayer three_glug;
+    private MediaPlayer one_glug;
+    private MediaPlayer two_glug;
+    private MediaPlayer three_glug;
+    private ArrayList<Integer> audiotime = new ArrayList<Integer>();
+    private int glug_time = 0;
 
     private ArrayList<Integer> classes = new ArrayList<Integer>();
     private int prev_score = 2;
@@ -123,6 +125,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         one_glug = MediaPlayer.create(MainActivity.this, R.raw.one_glug);
         two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
         three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
+        // time (ms)
+        audiotime.add(0);
+        audiotime.add(one_glug.getDuration());
+        audiotime.add(two_glug.getDuration());
+        audiotime.add(three_glug.getDuration());
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -314,62 +321,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         }
     }
 
-    public static boolean checkFrequency(ArrayList<Integer> arr) {
-        int n = arr.size();
-        if (n < 4) {
-            return false;
-        }
-
-        // Slice the last four elements of the array.
-        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(n - 4, n));
-
-        // Check the count of each element in the last_four array.
-        for (int i = 0; i < 4; i++) {
-            if (Collections.frequency(last_four, last_four.get(i)) > 2) {
-                return true;
-            }
-        }
-
-        // If we have checked all the elements without finding an element that
-        // appears more than twice, return false.
-        return false;
-    }
-
-    public static boolean checkOscillation(ArrayList<Integer> arr) {
-        int n = arr.size();
-        if (n < 3) {
-            return false;
-        }
-
-        // Slice the last three elements of the array.
-        ArrayList<Integer> last_three = new ArrayList<>(arr.subList(n - 3, n));
-
-        // Check if all three elements are identical.
-        if (last_three.get(0).equals(last_three.get(1)) && last_three.get(1).equals(last_three.get(2))) {
-            return true;
-        }
-
-        // If the last three elements are not identical, return false.
-        return false;
-    }
-
-    public static boolean checkPattern(ArrayList<Integer> arr) {
-        if (arr.size() < 4) {
-            return false;
-        }
-
-        int a = arr.get(arr.size() - 1);
-        int b = arr.get(arr.size() - 2);
-
-        if (a == b) {
-            return false;
-        }
-
-        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a));
-        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(arr.size() - 4, arr.size()));
-        return last_four.equals(pattern);
-    }
-
     public void detectPeak(ArrayList<Float> signal) {
         int length = signal.size();
         if (length > 2) {
@@ -381,7 +332,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     if ((length - 2) - last_peak_index > MIN_DISTANCE) {
                         // width of the signal
                         if (detecthawidth(signal)) {
-                            int interval = (length - 2 - last_peak_index) * 1000 / 449;  // in ms
+                            int interval = ((length - 2 - last_peak_index) * 1000 / 449) - glug_time;  // in ms
                             Log.d("PeakDetection", "" + interval + " ms");
                             feedbackControl(interval);
                             last_peak_index = length - 2;
@@ -451,9 +402,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             no_punish_rounds = 0;
         }
 
+        // score always in [0, 1, 2, 3]
         score = Math.max(0, Math.min(score, 3));
         Log.d("PeakDetection", "Score: " + score);
 
+        glug_time = audiotime.get(score);
         play_glug(score);
 
         prev_score = score;
@@ -473,5 +426,61 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             three_glug.start();
         }else{
         }
+    }
+
+    public static boolean checkFrequency(ArrayList<Integer> arr) {
+        int n = arr.size();
+        if (n < 4) {
+            return false;
+        }
+
+        // Slice the last four elements of the array.
+        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(n - 4, n));
+
+        // Check the count of each element in the last_four array.
+        for (int i = 0; i < 4; i++) {
+            if (Collections.frequency(last_four, last_four.get(i)) > 2) {
+                return true;
+            }
+        }
+
+        // If we have checked all the elements without finding an element that
+        // appears more than twice, return false.
+        return false;
+    }
+
+    public static boolean checkOscillation(ArrayList<Integer> arr) {
+        int n = arr.size();
+        if (n < 3) {
+            return false;
+        }
+
+        // Slice the last three elements of the array.
+        ArrayList<Integer> last_three = new ArrayList<>(arr.subList(n - 3, n));
+
+        // Check if all three elements are identical.
+        if (last_three.get(0).equals(last_three.get(1)) && last_three.get(1).equals(last_three.get(2))) {
+            return true;
+        }
+
+        // If the last three elements are not identical, return false.
+        return false;
+    }
+
+    public static boolean checkPattern(ArrayList<Integer> arr) {
+        if (arr.size() < 4) {
+            return false;
+        }
+
+        int a = arr.get(arr.size() - 1);
+        int b = arr.get(arr.size() - 2);
+
+        if (a == b) {
+            return false;
+        }
+
+        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a));
+        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(arr.size() - 4, arr.size()));
+        return last_four.equals(pattern);
     }
 }

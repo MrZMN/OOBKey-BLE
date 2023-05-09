@@ -65,15 +65,17 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final int datalogtime = 10000;      // delay period in ms
 
     // Feedback
-    private MediaPlayer one_glug;
-    private MediaPlayer two_glug;
-    private MediaPlayer three_glug;
+    private MediaPlayer glug_label1;
+    private MediaPlayer glug_label2;
+    private MediaPlayer glug_label3;
     private ArrayList<Integer> audiotime = new ArrayList<Integer>();
     private int glug_time = 0;
 
     private ArrayList<Integer> classes = new ArrayList<Integer>();
     private int prev_score = 2;
     private int no_punish_rounds = 0;
+
+    private Boolean isButtonTest = false;
 
     // Peak detection
     private final float MIN_AMPLITUDE = 4F; // min amplitude to be a peak
@@ -122,14 +124,14 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv3.setText(ss3);
 
         // Media
-        one_glug = MediaPlayer.create(MainActivity.this, R.raw.one_glug);
-        two_glug = MediaPlayer.create(MainActivity.this, R.raw.two_glug);
-        three_glug = MediaPlayer.create(MainActivity.this, R.raw.three_glug);
+        glug_label1 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch1);
+        glug_label2 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch2);
+        glug_label3 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch3);
         // time (ms)
         audiotime.add(0);
-        audiotime.add(one_glug.getDuration());
-        audiotime.add(two_glug.getDuration());
-        audiotime.add(three_glug.getDuration());
+        audiotime.add(glug_label1.getDuration());
+        audiotime.add(glug_label2.getDuration());
+        audiotime.add(glug_label3.getDuration());
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -232,6 +234,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             @Override
             public void onClick(View v) {
 
+                // disable the button
+                startbt.setEnabled(false);
+                startbt.setImageResource(R.drawable.ic_baseline_sd_card_24);
+                isButtonTest = true;
+
                 // check if connected with device
                 if(bleController.isBLEConnected == true) {
 
@@ -278,7 +285,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
 
-        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && isButtonTest == true) {
             // check ACC_X
             signal.add(sensorEvent.values[0]);
             detectPeak(signal);
@@ -332,8 +339,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     if ((length - 2) - last_peak_index > MIN_DISTANCE) {
                         // width of the signal
                         if (detecthawidth(signal)) {
-                            int interval = ((length - 2 - last_peak_index) * 1000 / 449) - glug_time;  // in ms
-                            Log.d("PeakDetection", "" + interval + " ms");
+                            int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
+//                            interval -=  - glug_time;
+                            Log.d("Feedback", "Interval: " + interval + " ms");
                             feedbackControl(interval);
                             last_peak_index = length - 2;
                         }
@@ -366,10 +374,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         // classify the time interval
         if(interval < 750){
             classes.add(1);
+            Log.d("Feedback", "Class: ①");
         }else if(interval >= 750 && interval <= 1500){
             classes.add(2);
+            Log.d("Feedback", "Class: ②");
         }else{
             classes.add(3);
+            Log.d("Feedback", "Class: ③");
         }
 
         // init score
@@ -392,8 +403,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             is_punish = 1;
         }
 
-        // Reward strategy 1: if the score is higher than previous round, add 1 to the score
-        if(score > prev_score) {
+        // Reward strategy 1: if previous round was punished, and the score is higher in this round (rectify)
+        if(no_punish_rounds == 0 && score > prev_score) {
             score += 1;
         }
         // Reward strategy 2: if there are no punish for three consecutive rounds, add 1 to the score
@@ -404,7 +415,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
         // score always in [0, 1, 2, 3]
         score = Math.max(0, Math.min(score, 3));
-        Log.d("PeakDetection", "Score: " + score);
+        Log.d("Feedback", "Score: " + score);
 
         glug_time = audiotime.get(score);
         play_glug(score);
@@ -419,11 +430,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     public void play_glug(Integer score) {
         if(score == 1){
-            one_glug.start();
+            glug_label1.start();
         }else if(score == 2){
-            two_glug.start();
+            glug_label2.start();
         }else if(score == 3){
-            three_glug.start();
+            glug_label3.start();
         }else{
         }
     }

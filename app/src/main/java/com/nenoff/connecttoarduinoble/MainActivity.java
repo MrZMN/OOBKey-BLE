@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     final Handler handler = new Handler();      // for delay purpose
     private final int datalogtime = 10000;      // delay period in ms
 
-    // Feedback
+    // Feedback System
     private MediaPlayer glug_label1;
     private MediaPlayer glug_label2;
     private MediaPlayer glug_label3;
@@ -73,12 +73,12 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     private ArrayList<Integer> classes = new ArrayList<Integer>();
     private int prev_score = 2;
-    private int no_punish_rounds = 0;
+    private int no_punish_rounds = 0;   // number of 'NO punish rounds'
 
-    private Boolean isButtonTest = false;
+    private Boolean isButtonTest = false;   // provisional for testing
 
     // Peak detection
-    private final float MIN_AMPLITUDE = 4F; // min amplitude to be a peak
+    private final float MIN_AMPLITUDE = 39F;// min amplitude to be a peak (39 m/s2 = 9.8 * 4)
     private final int MIN_DISTANCE = 20;    // min distance between two consecutive peaks
     private final int MAX_HA_WIDTH = 10;    // max width (from the lastest half-amplitude point to the peak)
     private ArrayList<Float> signal = new ArrayList<Float>();
@@ -129,9 +129,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         glug_label3 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch3);
         // time (ms)
         audiotime.add(0);
-        audiotime.add(glug_label1.getDuration());
-        audiotime.add(glug_label2.getDuration());
-        audiotime.add(glug_label3.getDuration());
+        audiotime.add(glug_label1.getDuration());   // 335 ms
+        audiotime.add(glug_label2.getDuration());   // 291 ms
+        audiotime.add(glug_label3.getDuration());   // 290 ms
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -341,8 +341,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                         if (detecthawidth(signal)) {
                             int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
 //                            interval -=  - glug_time;
-                            Log.d("Feedback", "Interval: " + interval + " ms");
-                            feedbackControl(interval);
+
+                            Log.d("Feedback", "Interval: " + interval + " ms, Peak Amplitude: " + signal.get(length - 2));
+
+//                            feedbackControl(interval);
+
                             last_peak_index = length - 2;
                         }
                     }
@@ -372,15 +375,18 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     public void feedbackControl(Integer interval) {
         // classify the time interval
-        if(interval < 750){
+        if(interval <= 750){
             classes.add(1);
             Log.d("Feedback", "Class: ①");
-        }else if(interval >= 750 && interval <= 1500){
+        }else if(interval > 750 && interval <= 1500){
             classes.add(2);
             Log.d("Feedback", "Class: ②");
-        }else{
+        }else if(interval > 1500 && interval <= 2250){
             classes.add(3);
             Log.d("Feedback", "Class: ③");
+        }else if(interval > 2250){
+            classes.add(4);
+            Log.d("Feedback", "Class: ④");
         }
 
         // init score
@@ -423,7 +429,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         prev_score = score;
         if(is_punish == 1) {
             no_punish_rounds = 0;
-        }else {
+        }else if(classes.size() > 4){
             no_punish_rounds += 1;
         }
     }
@@ -441,6 +447,27 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     public static boolean checkFrequency(ArrayList<Integer> arr) {
         int n = arr.size();
+        if (n < 6) {
+            return false;
+        }
+
+        // Slice the last six elements of the array.
+        ArrayList<Integer> last_six = new ArrayList<>(arr.subList(n - 6, n));
+
+        // Check the count of each element in the last_six array.
+        for (int i = 0; i < 6; i++) {
+            if (Collections.frequency(last_six, last_six.get(i)) > 4) {
+                return true;
+            }
+        }
+
+        // If we have checked all the elements without finding an element that
+        // appears more than forth, return false.
+        return false;
+    }
+
+    public static boolean checkOscillation(ArrayList<Integer> arr) {
+        int n = arr.size();
         if (n < 4) {
             return false;
         }
@@ -448,38 +475,17 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         // Slice the last four elements of the array.
         ArrayList<Integer> last_four = new ArrayList<>(arr.subList(n - 4, n));
 
-        // Check the count of each element in the last_four array.
-        for (int i = 0; i < 4; i++) {
-            if (Collections.frequency(last_four, last_four.get(i)) > 2) {
-                return true;
-            }
-        }
-
-        // If we have checked all the elements without finding an element that
-        // appears more than twice, return false.
-        return false;
-    }
-
-    public static boolean checkOscillation(ArrayList<Integer> arr) {
-        int n = arr.size();
-        if (n < 3) {
-            return false;
-        }
-
-        // Slice the last three elements of the array.
-        ArrayList<Integer> last_three = new ArrayList<>(arr.subList(n - 3, n));
-
-        // Check if all three elements are identical.
-        if (last_three.get(0).equals(last_three.get(1)) && last_three.get(1).equals(last_three.get(2))) {
+        // Check if all four elements are identical.
+        if (last_four.get(0).equals(last_four.get(1)) && last_four.get(1).equals(last_four.get(2)) && last_four.get(2).equals(last_four.get(3))) {
             return true;
         }
 
-        // If the last three elements are not identical, return false.
+        // If the last four elements are not identical, return false.
         return false;
     }
 
     public static boolean checkPattern(ArrayList<Integer> arr) {
-        if (arr.size() < 4) {
+        if (arr.size() < 5) {
             return false;
         }
 
@@ -490,8 +496,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             return false;
         }
 
-        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a));
-        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(arr.size() - 4, arr.size()));
-        return last_four.equals(pattern);
+        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(a, b, a, b, a));
+        ArrayList<Integer> last_five = new ArrayList<>(arr.subList(arr.size() - 5, arr.size()));
+        return last_five.equals(pattern);
     }
 }

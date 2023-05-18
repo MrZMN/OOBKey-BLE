@@ -66,12 +66,12 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final String ACC_FILE_NAME = "tap_phone_acc.dat";
     private final String GYO_FILE_NAME = "tap_phone_gyro.dat";
     final Handler handler = new Handler();      // for delay purpose
-    private final int datalogtime = 10000;      // datalog period in ms
+    private final int datalogtime = 20000;      // datalog period in ms
 
     // Peak detection
-    private final float MIN_AMPLITUDE = 29.4F;  // min amplitude to be a peak (29.4 m/s2 = 9.8 * 3)
+    private final float MIN_AMPLITUDE = 25F;  // min amplitude to be a peak (29.4 m/s2 = 9.8 * 2.5)
     private final int MIN_DISTANCE = 20;        // min distance between two consecutive peaks
-    private final int MAX_HA_WIDTH = 10;        // max width (from the lastest half-amplitude point to the peak)
+    private final int MAX_HA_WIDTH = 20;        // max width (from the lastest half-amplitude point to the peak)
     private ArrayList<Float> signal = new ArrayList<Float>();
     private int last_peak_index = 0;
 
@@ -85,8 +85,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private MediaPlayer earcon_label1;
     private MediaPlayer earcon_label2;
     private MediaPlayer earcon_label3;
-//    private ArrayList<Integer> audiotime = new ArrayList<Integer>();
-//    private int glug_time = 0;
 
     // Log
     private String TAG = "OOBKey";
@@ -133,13 +131,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv3.setText(ss3);
 
         // Media
-        earcon_label1 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch1);
-        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch2);
-        earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch3);
-//        audiotime.add(0);
-//        audiotime.add(earcon_label1.getDuration());   // 335 ms
-//        audiotime.add(earcon_label2.getDuration());   // 291 ms
-//        audiotime.add(earcon_label3.getDuration());   // 290 ms
+        earcon_label1 = MediaPlayer.create(MainActivity.this, R.raw.negative_supermario);
+        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.neutral_supermario);
+        earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.positive_supermario);
+
+        Log.d("Feedback", "Audio duration: " + earcon_label1.getDuration() + " ms");
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -295,9 +291,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                         if (detecthawidth(signal)) {
 
                             int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
-//                            interval -=  - glug_time;     // Question: should we deduct the earcon time from the reaction time?
+                            // Question: should we deduct the earcon time from the reaction time?
 
                             Log.d("Feedback", "Interval: " + interval + " ms, Peak Amplitude: " + signal.get(length - 2) + " m/s2");
+
+                            earcon_label2.start();
 
 //                            feedbackControl(interval);    // feedback system
 
@@ -312,8 +310,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     public boolean detecthawidth(ArrayList<Float> signal) {
         int length = signal.size();
         if (length > MAX_HA_WIDTH) {
-            // from the second-to-last element to the first element <--
-            for (int i = length - 2; i >= 0; i--) {
+            // from the third-to-last element to the first element <--
+            for (int i = length - 3; i >= 0; i--) {
                 // find the first half-amplitude point
                 if (signal.get(i) <= signal.get(length - 2) / 2) {
                     // width of half amplitude
@@ -392,22 +390,22 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     // feedback calculation based on latest input and recent history
     public void feedbackControl(Integer interval) {
         // classify the time interval
-        if(interval <= 750){
+        if(interval <= 600){
             classes.add(1);
             Log.d("Feedback", "Class: ①");
-        }else if(interval > 750 && interval <= 1500){
+        }else if(interval > 600 && interval <= 1200){
             classes.add(2);
             Log.d("Feedback", "Class: ②");
-        }else if(interval > 1500 && interval <= 2250){
+        }else if(interval > 1200 && interval <= 1800){
             classes.add(3);
             Log.d("Feedback", "Class: ③");
-        }else if(interval > 2250){
+        }else if(interval > 1800){
             classes.add(4);
             Log.d("Feedback", "Class: ④");
         }
 
         // init score
-        int score = 2;
+        int score = 1;
         int is_punish = 0;
 
         // Punish strategy 1: frequency check
@@ -436,11 +434,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             no_punish_rounds = 0;
         }
 
-        // score always in [0, 1, 2, 3]
-        score = Math.max(0, Math.min(score, 3));
+        // score always in [0, 1, 2]
+        score = Math.max(0, Math.min(score, 2));
         Log.d("Feedback", "Score: " + score);
 
-//        glug_time = audiotime.get(score);
         play_earcon(score);
 
         prev_score = score;
@@ -457,11 +454,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
      */
 
     public void play_earcon(Integer score) {
-        if(score == 1){
+        if(score == 0){
             earcon_label1.start();
-        }else if(score == 2){
+        }else if(score == 1){
             earcon_label2.start();
-        }else if(score == 3){
+        }else if(score == 2){
             earcon_label3.start();
         }else{
         }

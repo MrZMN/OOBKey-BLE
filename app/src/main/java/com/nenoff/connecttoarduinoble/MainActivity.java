@@ -41,6 +41,10 @@ import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity implements BLEControllerListener, SensorEventListener {
 
+    /*
+    VARIABLES & OBJECTS
+     */
+
     // BLE
     private BLEController bleController;
     private RemoteControl remoteControl;
@@ -62,30 +66,35 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final String ACC_FILE_NAME = "tap_phone_acc.dat";
     private final String GYO_FILE_NAME = "tap_phone_gyro.dat";
     final Handler handler = new Handler();      // for delay purpose
-    private final int datalogtime = 10000;      // delay period in ms
-
-    // Feedback System
-    private MediaPlayer glug_label1;
-    private MediaPlayer glug_label2;
-    private MediaPlayer glug_label3;
-    private ArrayList<Integer> audiotime = new ArrayList<Integer>();
-    private int glug_time = 0;
-
-    private ArrayList<Integer> classes = new ArrayList<Integer>();
-    private int prev_score = 2;
-    private int no_punish_rounds = 0;   // number of 'NO punish rounds'
-
-    private Boolean isButtonTest = false;   // provisional for testing
+    private final int datalogtime = 10000;      // datalog period in ms
 
     // Peak detection
-    private final float MIN_AMPLITUDE = 39F;// min amplitude to be a peak (39 m/s2 = 9.8 * 4)
-    private final int MIN_DISTANCE = 20;    // min distance between two consecutive peaks
-    private final int MAX_HA_WIDTH = 10;    // max width (from the lastest half-amplitude point to the peak)
+    private final float MIN_AMPLITUDE = 29.4F;  // min amplitude to be a peak (29.4 m/s2 = 9.8 * 3)
+    private final int MIN_DISTANCE = 20;        // min distance between two consecutive peaks
+    private final int MAX_HA_WIDTH = 10;        // max width (from the lastest half-amplitude point to the peak)
     private ArrayList<Float> signal = new ArrayList<Float>();
     private int last_peak_index = 0;
 
-    // Logs
+    // Feedback Calculation
+    private ArrayList<Integer> classes = new ArrayList<Integer>();
+    private int prev_score = 2;
+    private int no_punish_rounds = 0;       // number of 'NO punish rounds'
+    private Boolean isButtonTest = false;   // to enable tap detection (provisional for testing)
+
+    // Feedback Conversion
+    private MediaPlayer earcon_label1;
+    private MediaPlayer earcon_label2;
+    private MediaPlayer earcon_label3;
+//    private ArrayList<Integer> audiotime = new ArrayList<Integer>();
+//    private int glug_time = 0;
+
+    // Log
     private String TAG = "OOBKey";
+
+    /*
+    ANDROID LIFECYCLE
+    You know what it is.
+     */
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -124,14 +133,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv3.setText(ss3);
 
         // Media
-        glug_label1 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch1);
-        glug_label2 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch2);
-        glug_label3 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch3);
-        // time (ms)
-        audiotime.add(0);
-        audiotime.add(glug_label1.getDuration());   // 335 ms
-        audiotime.add(glug_label2.getDuration());   // 291 ms
-        audiotime.add(glug_label3.getDuration());   // 290 ms
+        earcon_label1 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch1);
+        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch2);
+        earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.glug_pitch3);
+//        audiotime.add(0);
+//        audiotime.add(earcon_label1.getDuration());   // 335 ms
+//        audiotime.add(earcon_label2.getDuration());   // 291 ms
+//        audiotime.add(earcon_label3.getDuration());   // 290 ms
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -183,49 +191,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         isdatalog = false;  // stop datalogging at any moment when phone returns to main page
     }
 
-    private void checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-                    42);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.BLUETOOTH},
-                    43);
-        }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.HIGH_SAMPLING_RATE_SENSORS) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.HIGH_SAMPLING_RATE_SENSORS},
-                    44);
-        }
-    }
+    /*
+    BUTTON CONTROL
+    When pressing the button, the icon changes and:
+    (i) Start tap detection
+    (ii) If BLE connected, synchronize and start datalogging
+     */
 
-    private void checkBLESupport() {
-        // Check if BLE is supported on the device.
-        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
-            Toast.makeText(this, "BLE not supported!", Toast.LENGTH_SHORT).show();
-            finish();
-        }
-    }
-
-    // BLE
-    @Override
-    public void BLEControllerConnected() {
-
-    }
-
-    @Override
-    public void BLEControllerDisconnected() {
-
-    }
-
-    @Override
-    public void BLEDeviceFound(String name, String address) {
-        this.deviceAddress = address;
-    }
-
-    // UI
     private void initConnectButton() {
         this.startbt = findViewById(R.id.imageButton);
         this.startbt.setBackgroundColor(bubackground);
@@ -234,10 +206,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             @Override
             public void onClick(View v) {
 
-                // disable the button
-                startbt.setEnabled(false);
-                startbt.setImageResource(R.drawable.ic_baseline_sd_card_24);
-                isButtonTest = true;
+                startbt.setEnabled(false);  // disable the button
+                startbt.setImageResource(R.drawable.ic_baseline_sd_card_24);    // change the icon
+                isButtonTest = true;    // Enable tap detection
 
                 // check if connected with device
                 if(bleController.isBLEConnected == true) {
@@ -281,17 +252,21 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         });
     }
 
-    // Sensor
+    /*
+    SENSOR CONTROL
+    This section handles sensor data reading in real-time.
+     */
+
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
 
+        // tap detection
         if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && isButtonTest == true) {
-            // check ACC_X
-            signal.add(sensorEvent.values[0]);
+            signal.add(sensorEvent.values[0]);  // check ACC_X
             detectPeak(signal);
         }
 
-        // operate only when datalog initialised
+        // datalog
         if(isdatalog == true){
             if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 saveonesample(sensorEvent, "ACC");
@@ -302,31 +277,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         }
     }
 
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int i) {
-
-    }
-
-    // File IO (new data will be appended)
-    private void saveonesample(SensorEvent sensorEvent, String sensorType){
-        try {
-            if(sensorType == "ACC") {
-                out = openFileOutput(ACC_FILE_NAME, MODE_APPEND);
-            }else if(sensorType == "GYO") {
-                out = openFileOutput(GYO_FILE_NAME, MODE_APPEND);
-            }
-            writer = new BufferedWriter(new OutputStreamWriter(out));
-            writer.write(sensorEvent.values[0] + ", ");
-            writer.write(sensorEvent.values[1] + ", ");
-            writer.write(sensorEvent.values[2] + "");
-            writer.newLine();
-            writer.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+    /*
+    TAP DETECTION
+    This section is to detect tap in real-time.
+     */
 
     public void detectPeak(ArrayList<Float> signal) {
         int length = signal.size();
@@ -339,12 +293,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     if ((length - 2) - last_peak_index > MIN_DISTANCE) {
                         // width of the signal
                         if (detecthawidth(signal)) {
+
                             int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
-//                            interval -=  - glug_time;
+//                            interval -=  - glug_time;     // Question: should we deduct the earcon time from the reaction time?
 
-                            Log.d("Feedback", "Interval: " + interval + " ms, Peak Amplitude: " + signal.get(length - 2));
+                            Log.d("Feedback", "Interval: " + interval + " ms, Peak Amplitude: " + signal.get(length - 2) + " m/s2");
 
-//                            feedbackControl(interval);
+//                            feedbackControl(interval);    // feedback system
 
                             last_peak_index = length - 2;
                         }
@@ -373,77 +328,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         return false;
     }
 
-    public void feedbackControl(Integer interval) {
-        // classify the time interval
-        if(interval <= 750){
-            classes.add(1);
-            Log.d("Feedback", "Class: ①");
-        }else if(interval > 750 && interval <= 1500){
-            classes.add(2);
-            Log.d("Feedback", "Class: ②");
-        }else if(interval > 1500 && interval <= 2250){
-            classes.add(3);
-            Log.d("Feedback", "Class: ③");
-        }else if(interval > 2250){
-            classes.add(4);
-            Log.d("Feedback", "Class: ④");
-        }
-
-        // init score
-        int score = 2;
-        int is_punish = 0;
-
-        // Punish strategy 1: frequency check
-        if(checkFrequency(classes)) {
-            score -= 1;
-            is_punish = 1;
-        }
-        // Punish strategy 2: oscillation check
-        if(checkOscillation(classes)) {
-            score -= 1;
-            is_punish = 1;
-        }
-        // Punish strategy 3: pattern check
-        if(checkPattern(classes)) {
-            score -= 1;
-            is_punish = 1;
-        }
-
-        // Reward strategy 1: if previous round was punished, and the score is higher in this round (rectify)
-        if(no_punish_rounds == 0 && score > prev_score) {
-            score += 1;
-        }
-        // Reward strategy 2: if there are no punish for three consecutive rounds, add 1 to the score
-        if(no_punish_rounds >= 3) {
-            score += 1;
-            no_punish_rounds = 0;
-        }
-
-        // score always in [0, 1, 2, 3]
-        score = Math.max(0, Math.min(score, 3));
-        Log.d("Feedback", "Score: " + score);
-
-        glug_time = audiotime.get(score);
-        play_glug(score);
-
-        prev_score = score;
-        if(is_punish == 1) {
-            no_punish_rounds = 0;
-        }else if(classes.size() > 4){
-            no_punish_rounds += 1;
-        }
-    }
-
-    public void play_glug(Integer score) {
-        if(score == 1){
-            glug_label1.start();
-        }else if(score == 2){
-            glug_label2.start();
-        }else if(score == 3){
-            glug_label3.start();
-        }else{
-        }
-    }
+    /*
+    FEEDBACK CALCULATION
+    This section is to quantify the randomness of taps, according to some criteria of RNG tests.
+     */
 
     public static boolean checkFrequency(ArrayList<Integer> arr) {
         int n = arr.size();
@@ -499,5 +387,158 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(a, b, a, b, a));
         ArrayList<Integer> last_five = new ArrayList<>(arr.subList(arr.size() - 5, arr.size()));
         return last_five.equals(pattern);
+    }
+
+    // feedback calculation based on latest input and recent history
+    public void feedbackControl(Integer interval) {
+        // classify the time interval
+        if(interval <= 750){
+            classes.add(1);
+            Log.d("Feedback", "Class: ①");
+        }else if(interval > 750 && interval <= 1500){
+            classes.add(2);
+            Log.d("Feedback", "Class: ②");
+        }else if(interval > 1500 && interval <= 2250){
+            classes.add(3);
+            Log.d("Feedback", "Class: ③");
+        }else if(interval > 2250){
+            classes.add(4);
+            Log.d("Feedback", "Class: ④");
+        }
+
+        // init score
+        int score = 2;
+        int is_punish = 0;
+
+        // Punish strategy 1: frequency check
+        if(checkFrequency(classes)) {
+            score -= 1;
+            is_punish = 1;
+        }
+        // Punish strategy 2: oscillation check
+        if(checkOscillation(classes)) {
+            score -= 1;
+            is_punish = 1;
+        }
+        // Punish strategy 3: pattern check
+        if(checkPattern(classes)) {
+            score -= 1;
+            is_punish = 1;
+        }
+
+        // Reward strategy 1: if previous round was punished, and the score is higher in this round (rectify)
+        if(no_punish_rounds == 0 && score > prev_score) {
+            score += 1;
+        }
+        // Reward strategy 2: if there are no punish for three consecutive rounds, add 1 to the score
+        if(no_punish_rounds >= 3) {
+            score += 1;
+            no_punish_rounds = 0;
+        }
+
+        // score always in [0, 1, 2, 3]
+        score = Math.max(0, Math.min(score, 3));
+        Log.d("Feedback", "Score: " + score);
+
+//        glug_time = audiotime.get(score);
+        play_earcon(score);
+
+        prev_score = score;
+        if(is_punish == 1) {
+            no_punish_rounds = 0;
+        }else if(classes.size() > 4){
+            no_punish_rounds += 1;
+        }
+    }
+
+    /*
+    FEEDBACK CONVERSION
+    This section is to convert the score of a tap to an earcon.
+     */
+
+    public void play_earcon(Integer score) {
+        if(score == 1){
+            earcon_label1.start();
+        }else if(score == 2){
+            earcon_label2.start();
+        }else if(score == 3){
+            earcon_label3.start();
+        }else{
+        }
+    }
+
+    /*
+    DATALOGGING
+    This section stores the IMU data as local files.
+     */
+
+    // File IO (new data will be appended)
+    private void saveonesample(SensorEvent sensorEvent, String sensorType){
+        try {
+            if(sensorType == "ACC") {
+                out = openFileOutput(ACC_FILE_NAME, MODE_APPEND);
+            }else if(sensorType == "GYO") {
+                out = openFileOutput(GYO_FILE_NAME, MODE_APPEND);
+            }
+            writer = new BufferedWriter(new OutputStreamWriter(out));
+            writer.write(sensorEvent.values[0] + ", ");
+            writer.write(sensorEvent.values[1] + ", ");
+            writer.write(sensorEvent.values[2] + "");
+            writer.newLine();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /*
+    OTHERS
+    You may not want to care about them
+     */
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int i) {
+    }
+
+    // BLE
+    @Override
+    public void BLEControllerConnected() {
+    }
+
+    @Override
+    public void BLEControllerDisconnected() {
+    }
+
+    @Override
+    public void BLEDeviceFound(String name, String address) {
+        this.deviceAddress = address;
+    }
+
+    private void checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    42);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.BLUETOOTH},
+                    43);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.HIGH_SAMPLING_RATE_SENSORS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.HIGH_SAMPLING_RATE_SENSORS},
+                    44);
+        }
+    }
+
+    private void checkBLESupport() {
+        // Check if BLE is supported on the device.
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(this, "BLE not supported!", Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 }

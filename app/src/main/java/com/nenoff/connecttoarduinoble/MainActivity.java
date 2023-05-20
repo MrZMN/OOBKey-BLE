@@ -77,8 +77,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     // Feedback Calculation
     private ArrayList<Integer> classes = new ArrayList<Integer>();
-    private int prev_score = 2;
     private int no_punish_rounds = 0;       // number of 'NO punish rounds'
+    private int last_punish = 0;            // the degree of punish in last round
+    private int last_reward = 0;            // if the last round has been rewarded
     private Boolean isButtonTest = false;   // to enable tap detection (provisional for testing)
 
     // Feedback Conversion
@@ -131,9 +132,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv3.setText(ss3);
 
         // Media
-        earcon_label1 = MediaPlayer.create(MainActivity.this, R.raw.negative_supermario);
-        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.neutral_supermario);
-        earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.positive_supermario);
+        earcon_label1 = MediaPlayer.create(MainActivity.this, R.raw.negative);
+        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.neutral);
+        earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.positive);
 
         Log.d("Feedback", "Audio duration: " + earcon_label1.getDuration() + " ms");
 
@@ -295,9 +296,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                             Log.d("Feedback", "Interval: " + interval + " ms, Peak Amplitude: " + signal.get(length - 2) + " m/s2");
 
-                            earcon_label2.start();
+//                            earcon_label2.start();    // to test the accuracy of tap detection
 
-//                            feedbackControl(interval);    // feedback system
+                            feedbackControl(interval);    // feedback system
 
                             last_peak_index = length - 2;
                         }
@@ -371,7 +372,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     }
 
     public static boolean checkPattern(ArrayList<Integer> arr) {
-        if (arr.size() < 5) {
+        if (arr.size() < 6) {
             return false;
         }
 
@@ -382,9 +383,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             return false;
         }
 
-        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(a, b, a, b, a));
-        ArrayList<Integer> last_five = new ArrayList<>(arr.subList(arr.size() - 5, arr.size()));
-        return last_five.equals(pattern);
+        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a, b, a));
+        ArrayList<Integer> last_six = new ArrayList<>(arr.subList(arr.size() - 6, arr.size()));
+        return last_six.equals(pattern);
     }
 
     // feedback calculation based on latest input and recent history
@@ -406,32 +407,37 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
         // init score
         int score = 1;
-        int is_punish = 0;
+        int current_punish = 0;
 
         // Punish strategy 1: frequency check
         if(checkFrequency(classes)) {
             score -= 1;
-            is_punish = 1;
+            current_punish++;
         }
         // Punish strategy 2: oscillation check
         if(checkOscillation(classes)) {
             score -= 1;
-            is_punish = 1;
+            current_punish++;
         }
         // Punish strategy 3: pattern check
         if(checkPattern(classes)) {
             score -= 1;
-            is_punish = 1;
+            current_punish++;
         }
 
-        // Reward strategy 1: if previous round was punished, and the score is higher in this round (rectify)
-        if(no_punish_rounds == 0 && score > prev_score) {
-            score += 1;
+        // Reward strategy 1: if previous round was punished; and the performance is better in this round; and the last round wasn't rewarded
+        if(no_punish_rounds == 0 && current_punish < last_punish && last_reward == 0) {
+            score = 2;
+            last_reward = 1;
         }
-        // Reward strategy 2: if there are no punish for three consecutive rounds, add 1 to the score
-        if(no_punish_rounds >= 3) {
-            score += 1;
+        // Reward strategy 2: if there are no punish for five consecutive rounds; and the last round wasn't rewarded
+        else if(no_punish_rounds >= 5 && last_reward == 0) {
+            score = 2;
+            last_reward = 1;
             no_punish_rounds = 0;
+        }
+        else {
+            last_reward = 0;
         }
 
         // score always in [0, 1, 2]
@@ -440,8 +446,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
         play_earcon(score);
 
-        prev_score = score;
-        if(is_punish == 1) {
+        last_punish = current_punish;
+        // accumulate the number of unpunished rounds
+        if(current_punish > 0) {
             no_punish_rounds = 0;
         }else if(classes.size() > 4){
             no_punish_rounds += 1;

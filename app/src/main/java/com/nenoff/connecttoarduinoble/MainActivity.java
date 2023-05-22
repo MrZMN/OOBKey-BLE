@@ -383,9 +383,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             return false;
         }
 
-        ArrayList<Integer> pattern = new ArrayList<>(Arrays.asList(b, a, b, a, b, a));
+        ArrayList<Integer> pattern1 = new ArrayList<>(Arrays.asList(b, a, b, a, b, a));
+        ArrayList<Integer> pattern2 = new ArrayList<>(Arrays.asList(b, b, a, b, b, a));
         ArrayList<Integer> last_six = new ArrayList<>(arr.subList(arr.size() - 6, arr.size()));
-        return last_six.equals(pattern);
+        return last_six.equals(pattern1) || last_six.equals(pattern2);
     }
 
     // feedback calculation based on latest input and recent history

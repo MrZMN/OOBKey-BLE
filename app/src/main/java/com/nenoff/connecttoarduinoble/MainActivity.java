@@ -89,6 +89,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
     // Log
     private String TAG = "OOBKey";
+    private String[] classSymbolLog = {"①", "②", "③", "④"};
 
     /*
     ANDROID LIFECYCLE
@@ -136,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.neutral);
         earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.positive);
 
-        Log.d("Feedback", "Audio duration: " + earcon_label1.getDuration() + " ms");
+//        Log.d("Feedback", "Audio duration: " + earcon_label1.getDuration() + " ms");
 
         // Sensor
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
@@ -294,7 +295,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                             int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
                             // Question: should we deduct the earcon time from the reaction time?
 
-                            Log.d("Feedback", "Interval: " + interval + " ms, Peak Amplitude: " + signal.get(length - 2) + " m/s2");
+                            Log.d("Feedback", "################");
+                            Log.d("Feedback", "Interval: " + interval + " ms");
+//                            Log.d("Feedback", "Peak Amplitude: " + signal.get(length - 2) + " m/s2");
 
 //                            earcon_label2.start();    // to test the accuracy of tap detection
 
@@ -394,17 +397,23 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         // classify the time interval
         if(interval <= 600){
             classes.add(1);
-            Log.d("Feedback", "Class: ①");
         }else if(interval > 600 && interval <= 1200){
             classes.add(2);
-            Log.d("Feedback", "Class: ②");
         }else if(interval > 1200 && interval <= 1800){
             classes.add(3);
-            Log.d("Feedback", "Class: ③");
         }else if(interval > 1800){
             classes.add(4);
-            Log.d("Feedback", "Class: ④");
         }
+
+        // Log check the user history
+        String allClassLog = "";
+        for (int i = 0; i < classes.size(); i++) {
+            allClassLog += classSymbolLog[classes.get(i) - 1];
+            if (i != classes.size() - 1) {
+                allClassLog += ", ";
+            }
+        }
+        Log.d("Feedback", allClassLog);
 
         // init score
         int score = 1;

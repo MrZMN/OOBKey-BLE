@@ -440,8 +440,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             score = 2;
             last_reward = 1;
         }
-        // Reward strategy 2: if there are no punish for five consecutive rounds; and the last round wasn't rewarded
-        else if(no_punish_rounds >= 5 && last_reward == 0) {
+        // Reward strategy 2: if there are no punish for six consecutive rounds; and the last round wasn't rewarded
+        else if(no_punish_rounds >= 6 && last_reward == 0) {
             score = 2;
             last_reward = 1;
             no_punish_rounds = 0;
@@ -454,13 +454,14 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         score = Math.max(0, Math.min(score, 2));
         Log.d("Feedback", "Score: " + score);
 
+        // play the earcon
         play_earcon(score);
 
         last_punish = current_punish;
         // accumulate the number of unpunished rounds
         if(current_punish > 0) {
             no_punish_rounds = 0;
-        }else if(classes.size() > 4){
+        }else {
             no_punish_rounds += 1;
         }
     }

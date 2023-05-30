@@ -60,13 +60,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private Vibrator vibrator;
 
     // File IO
-    private boolean isdatalog = false;          // control start/stop datalog
     private FileOutputStream out;
     private BufferedWriter writer;
     private final String ACC_FILE_NAME = "tapair_phone_accel.dat";
     private final String GYO_FILE_NAME = "tapair_phone_gyro.dat";
-    final Handler handler = new Handler();      // for delay purpose
-    private final int datalogtime = 20000;      // datalog period in ms
+    private boolean isdatalog = false;  // control start/stop datalog
+    private int tapCount = 0;           // the current count of taps
+    private final int tapAmount = 10;   // the required number of taps
 
     // Peak detection
     private final float MIN_AMPLITUDE = 25F;    // min amplitude to be a peak (29.4 m/s2 = 9.8 * 2.5)
@@ -214,37 +214,12 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     // Enable tap detection
                     isTapDetect = true;
 
-                    remoteControl.switchLED(true);      // send a signal to the device
+                    remoteControl.switchLED(true);      // notify the device to start datalog
 
                     // phone starts datalog
                     Log.d(TAG, "Datalog starts");
                     isdatalog = true;
 
-                    // phone stops datalog after a period
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Do something after the delay
-                            isdatalog = false;
-                            Log.d(TAG, "Datalog stops");
-
-                            // enable the button
-                            startbt.setEnabled(true);
-                            startbt.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
-
-                            // Disable tap detection
-                            isTapDetect = false;
-                            signal.clear();     // clear the content of previous signal
-
-                            // Vibrate
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE));
-                            } else {
-                                //deprecated in API 26
-                                vibrator.vibrate(1000);
-                            }
-                        }
-                    }, datalogtime);
                 }else {
                     Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
                 }
@@ -295,6 +270,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                         // width of the signal
                         if (detecthawidth(signal)) {
 
+                            // a new tap is detected
+                            tapCount += 1;
+
                             int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
                             // Question: should we deduct the earcon time from the reaction time?
                             // Answer: now the earcon lasts for 130 ms, which should be short enough
@@ -308,6 +286,45 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                             feedbackControl(interval);    // feedback system
 
                             last_peak_index = length - 2;
+
+                            // if we complete a run (pairing operation)
+                            if (tapCount==tapAmount){
+
+                                // stop datalog
+                                Log.d(TAG, "Datalog stops");
+                                isdatalog = false;
+
+                                remoteControl.endDatalog(true);      // notify the device to end datalog
+
+                                // enable the button
+                                startbt.setEnabled(true);
+                                startbt.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
+
+                                // Disable tap detection
+                                isTapDetect = false;
+
+                                // reset variables
+                                signal.clear();
+                                classes.clear();
+
+                                tapCount = 0;
+                                last_peak_index = 0;
+                                no_punish_rounds = 0;
+                                last_punish = 0;
+                                last_reward = 0;
+
+                                // add a line break in the file
+                                savelinebreak();
+
+                                // Vibrate
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE));
+                                } else {
+                                    //deprecated in API 26
+                                    vibrator.vibrate(1000);
+                                }
+                            }
+
                         }
                     }
                 }
@@ -503,6 +520,20 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             writer.write(sensorEvent.values[0] + ", ");
             writer.write(sensorEvent.values[1] + ", ");
             writer.write(sensorEvent.values[2] + "");
+            writer.newLine();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void savelinebreak(){
+        try {
+            out = openFileOutput(ACC_FILE_NAME, MODE_APPEND);
+            writer = new BufferedWriter(new OutputStreamWriter(out));
+            writer.write("END");
             writer.newLine();
             writer.close();
         } catch (FileNotFoundException e) {

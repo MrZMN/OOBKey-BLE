@@ -13,6 +13,7 @@ public class RemoteControl {
 
     private final static byte VALUE_OFF = 0x0;
     private final static byte VALUE_ON = (byte)0xFF;
+    private final static byte VALUE_END = (byte)0xFE;
 
     private BLEController bleController;
 
@@ -29,6 +30,10 @@ public class RemoteControl {
 
     public void switchLED(boolean on) {
         this.bleController.sendData(createControlWord(LED_COMMAND, on?VALUE_ON:VALUE_OFF));
+    }
+
+    public void endDatalog(boolean end) {
+        this.bleController.sendData(createControlWord(LED_COMMAND, end?VALUE_END:VALUE_OFF));
     }
 
 }

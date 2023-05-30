@@ -63,13 +63,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private boolean isdatalog = false;          // control start/stop datalog
     private FileOutputStream out;
     private BufferedWriter writer;
-    private final String ACC_FILE_NAME = "tap_phone_acc.dat";
-    private final String GYO_FILE_NAME = "tap_phone_gyro.dat";
+    private final String ACC_FILE_NAME = "tapair_phone_accel.dat";
+    private final String GYO_FILE_NAME = "tapair_phone_gyro.dat";
     final Handler handler = new Handler();      // for delay purpose
     private final int datalogtime = 20000;      // datalog period in ms
 
     // Peak detection
-    private final float MIN_AMPLITUDE = 25F;  // min amplitude to be a peak (29.4 m/s2 = 9.8 * 2.5)
+    private final float MIN_AMPLITUDE = 25F;    // min amplitude to be a peak (29.4 m/s2 = 9.8 * 2.5)
     private final int MIN_DISTANCE = 20;        // min distance between two consecutive peaks
     private final int MAX_HA_WIDTH = 20;        // max width (from the lastest half-amplitude point to the peak)
     private ArrayList<Float> signal = new ArrayList<Float>();
@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private int no_punish_rounds = 0;       // number of 'NO punish rounds'
     private int last_punish = 0;            // the degree of punish in last round
     private int last_reward = 0;            // if the last round has been rewarded
-    private Boolean isButtonTest = false;   // to enable tap detection (provisional for testing)
+    private Boolean isTapDetect = false;    // to enable/disable tap detection
 
     // Feedback Conversion
     private MediaPlayer earcon_label1;
@@ -203,17 +203,16 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.startbt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                startbt.setEnabled(false);  // disable the button
-                startbt.setImageResource(R.drawable.ic_baseline_sd_card_24);    // change the icon
-                isButtonTest = true;    // Enable tap detection
-
+                
                 // check if connected with device
                 if(bleController.isBLEConnected == true) {
 
                     // disable the button
                     startbt.setEnabled(false);
                     startbt.setImageResource(R.drawable.ic_baseline_sd_card_24);
+
+                    // Enable tap detection
+                    isTapDetect = true;
 
                     remoteControl.switchLED(true);      // send a signal to the device
 
@@ -232,6 +231,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                             // enable the button
                             startbt.setEnabled(true);
                             startbt.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
+
+                            // Disable tap detection
+                            isTapDetect = false;
+                            signal.clear();     // clear the content of previous signal
 
                             // Vibrate
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -259,7 +262,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     public void onSensorChanged(SensorEvent sensorEvent) {
 
         // tap detection
-        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && isButtonTest == true) {
+        if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER && isTapDetect == true) {
             signal.add(sensorEvent.values[0]);  // check ACC_X
             detectPeak(signal);
         }
@@ -269,9 +272,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 saveonesample(sensorEvent, "ACC");
             }
-            if(sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                saveonesample(sensorEvent, "GYO");
-            }
+//            if(sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+//                saveonesample(sensorEvent, "GYO");
+//            }
         }
     }
 
@@ -294,6 +297,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                             int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
                             // Question: should we deduct the earcon time from the reaction time?
+                            // Answer: now the earcon lasts for 130 ms, which should be short enough
 
                             Log.d("Feedback", "################");
                             Log.d("Feedback", "Interval: " + interval + " ms");

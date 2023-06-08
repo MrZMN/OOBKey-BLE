@@ -132,7 +132,13 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     testbt.setBackgroundColor(afterpresscolor);
 
                     // how much time does one run cost?
-                    run_time = (Integer.parseInt(vib_time) + 1500 + 1000) * num_move;
+                    if (vib_mode == "constant") {
+                        run_time = (Integer.parseInt(vib_time) + 1500 + 1000) * num_move;
+                    } else if (vib_mode == "stepped") {
+                        run_time = (Integer.parseInt(vib_time) * 3 + 1500 + 1000) * num_move;
+                    } else if (vib_mode == "swept") {
+                        run_time = (1750 + 1500 + 1000) * num_move;
+                    }
 
                     remoteControl.sendCommand(vib_mode, vib_frequency, vib_time, true);      // send the command to the device
 
@@ -179,6 +185,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     testbt.setEnabled(false);
                     testbt.setBackgroundColor(afterpresscolor);
 
+                    run_time = 10000 + 1500 + 1000;
+
                     remoteControl.testFrequency(vib_frequency, true);     // send the command to the device
 
                     // phone stops datalog after a period
@@ -200,7 +208,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                                 vibrator.vibrate(500);
                             }
                         }
-                    }, 10000);
+                    }, run_time);
                 }else {
                     Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
                 }

@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final String GYO_FILE_NAME = "tapair_phone_gyro.dat";
     private boolean isdatalog = false;  // control start/stop datalog
     private int tapCount = 0;           // the current count of taps
-    private final int tapAmount = 10;   // the required number of taps
+    private final int tapAmount = 15;   // the required number of taps
 
     // Peak detection
     private final float MIN_AMPLITUDE = 25F;    // min amplitude to be a peak (29.4 m/s2 = 9.8 * 2.5)
@@ -74,22 +74,10 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final int MAX_HA_WIDTH = 20;        // max width (from the lastest half-amplitude point to the peak)
     private ArrayList<Float> signal = new ArrayList<Float>();
     private int last_peak_index = 0;
-
-    // Feedback Calculation
-    private ArrayList<Integer> classes = new ArrayList<Integer>();
-    private int no_punish_rounds = 0;       // number of 'NO punish rounds'
-    private int last_punish = 0;            // the degree of punish in last round
-    private int last_reward = 0;            // if the last round has been rewarded
     private Boolean isTapDetect = false;    // to enable/disable tap detection
-
-    // Feedback Conversion
-    private MediaPlayer earcon_label1;
-    private MediaPlayer earcon_label2;
-    private MediaPlayer earcon_label3;
 
     // Log
     private String TAG = "OOBKey";
-    private String[] classSymbolLog = {"①", "②", "③", "④"};
 
     /*
     ANDROID LIFECYCLE
@@ -131,11 +119,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv1.setText(ss1);
         tv2.setText(ss2);
         tv3.setText(ss3);
-
-        // Media
-        earcon_label1 = MediaPlayer.create(MainActivity.this, R.raw.negative);
-        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.neutral);
-        earcon_label3 = MediaPlayer.create(MainActivity.this, R.raw.positive);
 
 //        Log.d("Feedback", "Audio duration: " + earcon_label1.getDuration() + " ms");
 
@@ -273,17 +256,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                             // a new tap is detected
                             tapCount += 1;
 
-                            int interval = ((length - 2 - last_peak_index) * 1000 / 449);  // in ms
-                            // Question: should we deduct the earcon time from the reaction time?
-                            // Answer: now the earcon lasts for 130 ms, which should be short enough
-
-                            Log.d("Feedback", "################");
-                            Log.d("Feedback", "Interval: " + interval + " ms");
+                            Log.d("Feedback", "New tap detected: " + tapCount);
 //                            Log.d("Feedback", "Peak Amplitude: " + signal.get(length - 2) + " m/s2");
-
-//                            earcon_label2.start();    // to test the accuracy of tap detection
-
-                            feedbackControl(interval);    // feedback system
 
                             last_peak_index = length - 2;
 
@@ -305,13 +279,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                                 // reset variables
                                 signal.clear();
-                                classes.clear();
 
                                 tapCount = 0;
                                 last_peak_index = 0;
-                                no_punish_rounds = 0;
-                                last_punish = 0;
-                                last_reward = 0;
 
                                 // add a line break in the file
                                 savelinebreak();
@@ -349,158 +319,6 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             }
         }
         return false;
-    }
-
-    /*
-    FEEDBACK CALCULATION
-    This section is to quantify the randomness of taps, according to some criteria of RNG tests.
-     */
-
-    public static boolean checkFrequency(ArrayList<Integer> arr) {
-        int n = arr.size();
-        if (n < 6) {
-            return false;
-        }
-
-        // Slice the last six elements of the array.
-        ArrayList<Integer> last_six = new ArrayList<>(arr.subList(n - 6, n));
-
-        // Check the count of each element in the last_six array.
-        for (int i = 0; i < 6; i++) {
-            if (Collections.frequency(last_six, last_six.get(i)) > 4) {
-                return true;
-            }
-        }
-
-        // If we have checked all the elements without finding an element that
-        // appears more than forth, return false.
-        return false;
-    }
-
-    public static boolean checkOscillation(ArrayList<Integer> arr) {
-        int n = arr.size();
-        if (n < 4) {
-            return false;
-        }
-
-        // Slice the last four elements of the array.
-        ArrayList<Integer> last_four = new ArrayList<>(arr.subList(n - 4, n));
-
-        // Check if all four elements are identical.
-        if (last_four.get(0).equals(last_four.get(1)) && last_four.get(1).equals(last_four.get(2)) && last_four.get(2).equals(last_four.get(3))) {
-            return true;
-        }
-
-        // If the last four elements are not identical, return false.
-        return false;
-    }
-
-    public static boolean checkPattern(ArrayList<Integer> arr) {
-        if (arr.size() < 6) {
-            return false;
-        }
-
-        int a = arr.get(arr.size() - 1);
-        int b = arr.get(arr.size() - 2);
-
-        if (a == b) {
-            return false;
-        }
-
-        ArrayList<Integer> pattern1 = new ArrayList<>(Arrays.asList(b, a, b, a, b, a));
-        ArrayList<Integer> pattern2 = new ArrayList<>(Arrays.asList(b, b, a, b, b, a));
-        ArrayList<Integer> last_six = new ArrayList<>(arr.subList(arr.size() - 6, arr.size()));
-        return last_six.equals(pattern1) || last_six.equals(pattern2);
-    }
-
-    // feedback calculation based on latest input and recent history
-    public void feedbackControl(Integer interval) {
-        // classify the time interval
-        if(interval <= 600){
-            classes.add(1);
-        }else if(interval > 600 && interval <= 1200){
-            classes.add(2);
-        }else if(interval > 1200 && interval <= 1800){
-            classes.add(3);
-        }else if(interval > 1800){
-            classes.add(4);
-        }
-
-        // Log check the user history
-        String allClassLog = "";
-        for (int i = 0; i < classes.size(); i++) {
-            allClassLog += classSymbolLog[classes.get(i) - 1];
-            if (i != classes.size() - 1) {
-                allClassLog += ", ";
-            }
-        }
-        Log.d("Feedback", allClassLog);
-
-        // init score
-        int score = 1;
-        int current_punish = 0;
-
-        // Punish strategy 1: frequency check
-        if(checkFrequency(classes)) {
-            score -= 1;
-            current_punish++;
-        }
-        // Punish strategy 2: oscillation check
-        if(checkOscillation(classes)) {
-            score -= 1;
-            current_punish++;
-        }
-        // Punish strategy 3: pattern check
-        if(checkPattern(classes)) {
-            score -= 1;
-            current_punish++;
-        }
-
-        // Reward strategy 1: if previous round was punished; and the performance is better in this round; and the last round wasn't rewarded
-        if(no_punish_rounds == 0 && current_punish < last_punish && last_reward == 0) {
-            score = 2;
-            last_reward = 1;
-        }
-        // Reward strategy 2: if there are no punish for six consecutive rounds; and the last round wasn't rewarded
-        else if(no_punish_rounds >= 6 && last_reward == 0) {
-            score = 2;
-            last_reward = 1;
-            no_punish_rounds = 0;
-        }
-        else {
-            last_reward = 0;
-        }
-
-        // score always in [0, 1, 2]
-        score = Math.max(0, Math.min(score, 2));
-        Log.d("Feedback", "Score: " + score);
-
-        // play the earcon
-        play_earcon(score);
-
-        last_punish = current_punish;
-        // accumulate the number of unpunished rounds
-        if(current_punish > 0) {
-            no_punish_rounds = 0;
-        }else {
-            no_punish_rounds += 1;
-        }
-    }
-
-    /*
-    FEEDBACK CONVERSION
-    This section is to convert the score of a tap to an earcon.
-     */
-
-    public void play_earcon(Integer score) {
-        if(score == 0){
-            earcon_label1.start();
-        }else if(score == 1){
-            earcon_label2.start();
-        }else if(score == 2){
-            earcon_label3.start();
-        }else{
-        }
     }
 
     /*

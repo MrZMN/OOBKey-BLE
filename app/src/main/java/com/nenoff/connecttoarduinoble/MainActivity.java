@@ -66,7 +66,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final String GYO_FILE_NAME = "tapair_phone_gyro.dat";
     private boolean isdatalog = false;  // control start/stop datalog
     private int tapCount = 0;           // the current count of taps
-    private final int tapAmount = 10;   // the required number of taps
+    private final int tapAmount = 15;   // the required number of taps
+    final Handler handler = new Handler();      // for delay purpose
 
     // Peak detection
     private final float MIN_AMPLITUDE = 25F;    // min amplitude to be a peak (29.4 m/s2 = 9.8 * 2.5)
@@ -290,41 +291,48 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                             // if we complete a run (pairing operation)
                             if (tapCount==tapAmount){
 
-                                // stop datalog
-                                Log.d(TAG, "Datalog stops");
-                                isdatalog = false;
+                                // phone delays for a while (but doesn't block datalogging)
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        // Do something after the delay
 
-                                remoteControl.endDatalog(true);      // notify the device to end datalog
+                                        // stop datalog
+                                        Log.d(TAG, "Datalog stops");
+                                        isdatalog = false;
 
-                                // enable the button
-                                startbt.setEnabled(true);
-                                startbt.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
+                                        remoteControl.endDatalog(true);      // notify the device to end datalog
 
-                                // Disable tap detection
-                                isTapDetect = false;
+                                        // enable the button
+                                        startbt.setEnabled(true);
+                                        startbt.setImageResource(R.drawable.ic_baseline_play_circle_filled_24);
 
-                                // reset variables
-                                signal.clear();
-                                classes.clear();
+                                        // Disable tap detection
+                                        isTapDetect = false;
 
-                                tapCount = 0;
-                                last_peak_index = 0;
-                                no_punish_rounds = 0;
-                                last_punish = 0;
-                                last_reward = 0;
+                                        // reset variables
+                                        signal.clear();
+                                        classes.clear();
 
-                                // add a line break in the file
-                                savelinebreak();
+                                        tapCount = 0;
+                                        last_peak_index = 0;
+                                        no_punish_rounds = 0;
+                                        last_punish = 0;
+                                        last_reward = 0;
 
-                                // Vibrate
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE));
-                                } else {
-                                    //deprecated in API 26
-                                    vibrator.vibrate(1000);
-                                }
+                                        // add a line break in the file
+                                        savelinebreak();
+
+                                        // Vibrate
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            vibrator.vibrate(VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE));
+                                        } else {
+                                            //deprecated in API 26
+                                            vibrator.vibrate(1000);
+                                        }
+                                    }
+                                }, 200);
                             }
-
                         }
                     }
                 }

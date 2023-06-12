@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private String vib_frequency = "";
     private String vib_time = "";
     final Handler handler = new Handler();      // for delay purpose
-    private final int num_move = 5;      // number of moves per run
+    private final int num_move = 15;      // number of moves per run
     private int run_time = 0;
 
     // Sensor

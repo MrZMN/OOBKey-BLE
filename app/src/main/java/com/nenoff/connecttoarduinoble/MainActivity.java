@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private final String GYO_FILE_NAME = "tapair_phone_gyro.dat";
     private boolean isdatalog = false;  // control start/stop datalog
     private int tapCount = 0;           // the current count of taps
-    private final int tapAmount = 15;   // the required number of taps
+    private final int tapAmount = 16;   // the required number of taps
     final Handler handler = new Handler();      // for delay purpose
 
     // Peak detection

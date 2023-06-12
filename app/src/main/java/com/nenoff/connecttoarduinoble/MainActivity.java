@@ -38,7 +38,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private Spinner spinner_time;
     String[] modes = {"swept", "constant", "stepped"};
     String[] frequencies = {"50", "75", "100"};
-    String[] times = {"400", "600", "800", "1000"};
+//    String[] times = {"400", "600", "800", "1000"};
+    String[] times = {"400", "700", "1000"};
     private int initialcolor = Color.parseColor("#9acd32");
     private int afterpresscolor = Color.parseColor("#d3d3d3");
 

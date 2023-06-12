@@ -41,7 +41,7 @@ public class RemoteControl {
         } else if (mode == "stepped") {
             if (time == "400") {
                 VALUE_COMMAND = 0x20;
-            } else if (time == "600") {
+            } else if (time == "700") {
                 VALUE_COMMAND = 0x24;
             } else if (time == "800") {
                 VALUE_COMMAND = 0x28;
@@ -57,7 +57,7 @@ public class RemoteControl {
                 } else if (frequency == "100") {
                     VALUE_COMMAND = 0x12;
                 }
-            } else if (time == "600") {
+            } else if (time == "700") {
                 if (frequency == "50") {
                     VALUE_COMMAND = 0x14;
                 } else if (frequency == "75") {

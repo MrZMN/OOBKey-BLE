@@ -5,7 +5,7 @@ android {
 
 
     defaultConfig {
-        applicationId "com.nenoff.connecttoarduinoble"
+        applicationId "com.nenoff.connecttoarduinoble.feedback"
         minSdkVersion 23
         targetSdkVersion 33
         versionCode 1

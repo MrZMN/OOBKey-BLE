@@ -36,7 +36,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private Spinner spinner_mode;
     private Spinner spinner_frequency;
     private Spinner spinner_time;
-    String[] modes = {"swept", "constant", "stepped"};
+//    String[] modes = {"swept", "constant", "stepped"};
+    String[] modes = {"constant", "stepped"};
     String[] frequencies = {"50", "75", "100"};
 //    String[] times = {"400", "600", "800", "1000"};
     String[] times = {"400", "700", "1000"};

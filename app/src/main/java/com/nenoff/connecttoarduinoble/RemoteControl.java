@@ -89,6 +89,9 @@ public class RemoteControl {
 
     public void testFrequency(String frequency, boolean on) {
 
+        /*
+        Now changed to tutorial mode (14/06/23)
+         */
         if (frequency == "50") {
             TEST_COMMAND = (byte) 0xFD;
         } else if (frequency == "75") {

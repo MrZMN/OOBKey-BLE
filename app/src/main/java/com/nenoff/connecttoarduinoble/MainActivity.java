@@ -205,8 +205,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
             @Override
             public void onClick(View v) {
                 
-                // check if connected with device
-                if(bleController.isBLEConnected == true) {
+//                // check if connected with device
+//                if(bleController.isBLEConnected == true) {
 
                     // disable the button
                     startbt.setEnabled(false);
@@ -215,15 +215,15 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                     // Enable tap detection
                     isTapDetect = true;
 
-                    remoteControl.switchLED(true);      // notify the device to start datalog
+//                    remoteControl.switchLED(true);      // notify the device to start datalog
 
-                    // phone starts datalog
-                    Log.d(TAG, "Datalog starts");
-                    isdatalog = true;
+//                    // phone starts datalog
+//                    Log.d(TAG, "Datalog starts");
+//                    isdatalog = true;
 
-                }else {
-                    Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
-                }
+//                }else {
+//                    Toast.makeText(getApplicationContext(), "Device not connected via BLE!", Toast.LENGTH_SHORT).show();
+//                }
 
             }
         });
@@ -282,9 +282,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                             Log.d("Feedback", "Interval: " + interval + " ms");
 //                            Log.d("Feedback", "Peak Amplitude: " + signal.get(length - 2) + " m/s2");
 
-//                            earcon_label2.start();    // to test the accuracy of tap detection
+                            earcon_label2.start();    // to test the accuracy of tap detection
 
-                            feedbackControl(interval);    // feedback system
+//                            feedbackControl(interval);    // feedback system
 
                             last_peak_index = length - 2;
 
@@ -297,11 +297,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                                     public void run() {
                                         // Do something after the delay
 
-                                        // stop datalog
-                                        Log.d(TAG, "Datalog stops");
-                                        isdatalog = false;
+//                                        // stop datalog
+//                                        Log.d(TAG, "Datalog stops");
+//                                        isdatalog = false;
 
-                                        remoteControl.endDatalog(true);      // notify the device to end datalog
+//                                        remoteControl.endDatalog(true);      // notify the device to end datalog
 
                                         // enable the button
                                         startbt.setEnabled(true);
@@ -321,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
                                         last_reward = 0;
 
                                         // add a line break in the file
-                                        savelinebreak();
+//                                        savelinebreak();
 
                                         // Vibrate
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

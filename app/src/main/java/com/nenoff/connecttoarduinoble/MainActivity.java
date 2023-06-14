@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         this.bleController = BLEController.getInstance(this);
         this.bleController.addBLEControllerListener(this);
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            this.bleController.init();
+//            this.bleController.init();
         }
     }
 

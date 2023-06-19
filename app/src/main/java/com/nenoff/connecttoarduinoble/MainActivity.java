@@ -77,6 +77,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     private int last_peak_index = 0;
     private Boolean isTapDetect = false;    // to enable/disable tap detection
 
+    private MediaPlayer earcon_label2;
+
     // Log
     private String TAG = "OOBKey";
 
@@ -120,6 +122,9 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         tv1.setText(ss1);
         tv2.setText(ss2);
         tv3.setText(ss3);
+
+        // Media
+        earcon_label2 = MediaPlayer.create(MainActivity.this, R.raw.neutral);
 
 //        Log.d("Feedback", "Audio duration: " + earcon_label1.getDuration() + " ms");
 
@@ -259,6 +264,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                             Log.d("Feedback", "New tap detected: " + tapCount);
 //                            Log.d("Feedback", "Peak Amplitude: " + signal.get(length - 2) + " m/s2");
+
+                            earcon_label2.start();    // to test the accuracy of tap detection
 
                             last_peak_index = length - 2;
 

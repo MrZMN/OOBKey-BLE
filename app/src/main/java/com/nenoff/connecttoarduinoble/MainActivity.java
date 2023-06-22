@@ -135,11 +135,11 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
 
                     // how much time does one run cost?
                     if (vib_mode == "constant") {
-                        run_time = (Integer.parseInt(vib_time) + 1500 + 1000) * num_move;
+                        run_time = (Integer.parseInt(vib_time) + 2300 + 700) * num_move;
                     } else if (vib_mode == "stepped") {
-                        run_time = (Integer.parseInt(vib_time) * 3 + 1500 + 1000) * num_move;
+                        run_time = (Integer.parseInt(vib_time) * 3 + 2300 + 700) * num_move;
                     } else if (vib_mode == "swept") {
-                        run_time = (1750 + 1500 + 1000) * num_move;
+                        run_time = (1750 + 2300 + 700) * num_move;
                     }
 
                     remoteControl.sendCommand(vib_mode, vib_frequency, vib_time, true);      // send the command to the device

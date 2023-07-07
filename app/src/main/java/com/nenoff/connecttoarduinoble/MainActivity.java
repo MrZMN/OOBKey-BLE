@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
     final Handler handler = new Handler();      // for delay purpose
 
     // Peak detection
-    private final float MIN_AMPLITUDE = 15F;    // min amplitude to be a peak (14.7 m/s2 = 9.8 * 1.5)
+    private final float MIN_AMPLITUDE = 19F;    // min amplitude to be a peak (14.7 m/s2 = 9.8 * 1.5)
     private final int MIN_DISTANCE = 50;        // min distance between two consecutive peaks
     private final int MAX_HA_WIDTH = 20;        // max width (from the lastest half-amplitude point to the peak)
     private ArrayList<Float> signal = new ArrayList<Float>();

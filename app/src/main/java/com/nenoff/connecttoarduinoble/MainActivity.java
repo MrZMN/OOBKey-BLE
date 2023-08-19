@@ -116,8 +116,8 @@ public class MainActivity extends AppCompatActivity implements BLEControllerList
         TextView tv2 = findViewById(R.id.textView2);
         TextView tv3 = findViewById(R.id.textView3);
 
-        String sentence1 = "1. Press the icon";
-        String sentence2 = "2. Tap me on your chest";
+        String sentence1 = "1. Press the button";
+        String sentence2 = "2. Tap randomly on chest";
         String sentence3 = "3. Stop with a vibration";
 
         ForegroundColorSpan fcsPurple = new ForegroundColorSpan(Color.parseColor("#A660EC"));
